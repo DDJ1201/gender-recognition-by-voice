@@ -6,7 +6,8 @@ import numpy as np
 from sys import byteorder
 from array import array
 from struct import pack
-
+from utils import load_data, split_data, create_model
+import argparse
 
 THRESHOLD = 500
 CHUNK_SIZE = 1024
@@ -14,6 +15,22 @@ FORMAT = pyaudio.paInt16
 RATE = 16000
 
 SILENCE = 30
+
+def detect_genderino(file=None):
+    from utils import load_data, split_data, create_model
+    import argparse
+    model = create_model()
+    model.load_weights("results/model.h5")
+    # extract features and reshape it
+    features = extract_feature(file, mel=True).reshape(1, -1)
+    # predict the gender!
+    male_prob = model.predict(features)[0][0]
+    female_prob = 1 - male_prob
+    gender = "male" if male_prob > female_prob else "female"
+    # show the result!
+    print("Result:", gender)
+    print(f"Probabilities:     Male: {male_prob*100:.2f}%    Female: {female_prob*100:.2f}%")
+    return gender, male_prob, female_prob
 
 def is_silent(snd_data):
     "Returns 'True' if below the 'silent' threshold"
@@ -157,6 +174,7 @@ def extract_feature(file_name, **kwargs):
         tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(X), sr=sample_rate).T,axis=0)
         result = np.hstack((result, tonnetz))
     return result
+
 
 
 if __name__ == "__main__":
